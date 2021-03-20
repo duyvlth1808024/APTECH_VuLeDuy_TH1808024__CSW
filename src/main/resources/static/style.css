@@ -1,0 +1,23 @@
+body {
+    background: #f2f2f2;
+}
+
+
+.select-option {
+    width: 150px;
+    height: 150px;
+    padding: 25px 10px;
+    margin: 25px;
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 4px 8px 0 rgba(9, 30, 66, 0.1);
+}
+
+.select-option i {
+    font-size: 25px;
+}
+
+.select-option div {
+    text-align: center;
+    padding: 5px 0;
+}

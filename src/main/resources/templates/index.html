@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <title>Banking Service</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" integrity="sha512-HK5fgLBL+xu6dm/Ii3z4xhlSUyZgTT9tuc/hSrtw6uzJOvgRr2a9jyxxT1ely+B+xFAmJKVSTbpM/CuL7qxO8w==" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+    <div class="container">
+        <main id="app" style="padding-top: 25px;">
+            <router-view></router-view>
+        </main>
+    </div>
+
+    <template id="selection">
+        <div class="select-action">
+            <h2>Chọn dịch vụ bạn muốn thực thiện</h2>
+            <div class="row">
+                <router-link :to="{path: '/payment'}" class="select-option">
+                    <div><i class="fas fa-money-bill"></i></div>
+                    <div><span>Thanh toán đơn hàng</span></div>
+                </router-link>
+                <router-link :to="{path: '/transaction-history'}" class="select-option">
+                    <div><i class="fas fa-search"></i></div>
+                    <div><span>Tra cứu lịch sử giao dịch</span></div>
+                </router-link>
+                <router-link :to="{path: '/account/create'}" class="select-option">
+                    <div><i class="fas fa-money-check-alt"></i></div>
+                    <div><span>Tạo tài khoản ngân hàng</span></div>
+                </router-link>
+                <router-link :to="{path: '/partner/create'}" class="select-option">
+                    <div><i class="fas fa-file-invoice"></i></div>
+                    <div><span>Tạo tài khoản nhận thanh toán</span></div>
+                </router-link>
+                <router-link :to="{path: '/partner/connect-banking'}" class="select-option">
+                    <div><i class="fas fa-link"></i></div>
+                    <div><span>Liên kết tài khoản nhận thanh toán với ngân hàng</span></div>
+                </router-link>
+
+            </div>
+        </div>
+    </template>
+
+    <template id="sign-up-account">
+        <div class="col-md-6">
+            <h2>Tạo tài khoản ngân hàng</h2>
+            <form @submit="createAccount">
+                <div v-if="error.length > 0" class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Số tài khoản</label>
+                    <input
+                            class="form-control"
+                            id="accountNumber"
+                            placeholder="Nhập số tài khoản"
+                            autocomplete=""
+                            v-model="account.accountNumber
+"                           v-on:input="onChangeAccountNumber($event)">
+                    <small id="accountNumberHelp" class="form-text text-muted">
+                        Nhập số tài khoản ngân hàng bạn muốn. (độ dài 8 số)
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="pinNumber">Mã PIN</label>
+                    <input
+                            type="password"
+                            class="form-control"
+                            id="pinNumber"
+                            autocomplete=""
+                            placeholder="Nhập mã PIN"
+                            v-model="account.pinNumber">
+                </div>
+                <button type="submit" class="btn btn-primary">Tạo</button>
+                <router-link :to="{path: '/'}">
+                    <button class="btn btn-default">Quay lại</button>
+                </router-link>
+            </form>
+        </div>
+    </template>
+
+    <template id="sign-up-partner">
+        <div class="col-md-6">
+            <h2>Tạo tài khoản ngân hàng nhận thanh toán</h2>
+            <form @submit="createPartner">
+                <div v-if="error.length > 0" class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Số tài khoản</label>
+                    <input
+                            class="form-control"
+                            id="accountNumber"
+                            placeholder="Nhập số tài khoản"
+                            autocomplete=""
+                            v-model="partner.accountNumber
+"                       v-on:input="onChangeAccountNumber($event)">
+                    <small id="accountNumberHelp" class="form-text text-muted">
+                        Nhập số tài khoản nhận thanh toán bạn muốn. (độ dài 8 số)
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <input
+                            type="password"
+                            class="form-control"
+                            id="password"
+                            autocomplete=""
+                            placeholder="Nhập mật khẩu"
+                            v-model="partner.password">
+                </div>
+                <button type="submit" class="btn btn-primary">Tạo</button>
+                <router-link :to="{path: '/'}">
+                    <button class="btn btn-default">Quay lại</button>
+                </router-link>
+            </form>
+        </div>
+    </template>
+
+    <template id="partner-connect-banking">
+        <div class="col-md-6">
+            <h2 v-if="dto.step === 1">Nhập thông tin tài khoản nhận thanh toán</h2>
+            <h2 v-else>Nhập thông tin tài khoản ngân hàng liên kết</h2>
+            <form @submit="createConnect" v-if="dto.step === 1">
+                <div v-if="error.length > 0" class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Số tài khoản</label>
+                    <input
+                            class="form-control"
+                            id="accountNumber"
+                            placeholder="Nhập số tài khoản"
+                            autocomplete=""
+                            v-model="dto.partnerAccountNumber">
+                    <small id="accountNumberHelp" class="form-text text-muted">
+                        Nhập số tài khoản nhận thanh toán
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <input
+                            type="password"
+                            class="form-control"
+                            id="password"
+                            autocomplete=""
+                            placeholder="Nhập mật khẩu"
+                            v-model="dto.partnerAccountPassword">
+                </div>
+                <button type="submit" class="btn btn-primary">Tiếp tục</button>
+                <router-link :to="{path: '/'}">
+                    <button class="btn btn-default">Hủy</button>
+                </router-link>
+            </form>
+            <form @submit="createConnect" v-else>
+                <div v-if="error.length > 0" class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Số tài khoản</label>
+                    <input
+                            class="form-control"
+                            id="accountNumber"
+                            placeholder="Nhập số tài khoản"
+                            autocomplete=""
+                            v-model="dto.accountNumber">
+                    <small id="accountNumberHelp" class="form-text text-muted">
+                        Nhập số tài khoản ngân hàng bạn muốn kết nối đến
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="pinNumber">Mã PIN</label>
+                    <input
+                            type="password"
+                            class="form-control"
+                            id="pinNumber"
+                            autocomplete=""
+                            placeholder="Nhập mã PIN"
+                            v-model="dto.accountPINNumber">
+                </div>
+                <button type="submit" class="btn btn-primary">Tạo kết nối</button>
+                <router-link :to="{path: '/'}">
+                    <button class="btn btn-default">Hủy</button>
+                </router-link>
+            </form>
+        </div>
+    </template>
+
+    <template id="payment">
+        <div class="col-md-6">
+            <h2 v-if="step === 1">Nhập thông tin tài khoản nhận thanh toán</h2>
+            <h2 v-else>Nhập thông tin hóa đơn</h2>
+            <form @submit="getAccountBankingPartner" v-if="step === 1">
+                <div v-if="error.length > 0" class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Số tài khoản</label>
+                    <input
+                            class="form-control"
+                            id="accountNumber"
+                            placeholder="Nhập số tài khoản"
+                            autocomplete=""
+                            v-model="partner.accountNumber">
+                    <small id="accountNumberHelp" class="form-text text-muted">
+                        Nhập số tài khoản nhận thanh toán
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mật khẩu</label>
+                    <input
+                            type="password"
+                            class="form-control"
+                            id="password"
+                            autocomplete=""
+                            placeholder="Nhập mật khẩu"
+                            v-model="partner.password">
+                </div>
+                <button type="submit" class="btn btn-primary">Tiếp tục</button>
+                <router-link :to="{path: '/'}">
+                    <button class="btn btn-default">Hủy</button>
+                </router-link>
+            </form>
+            <form @submit="submitPayment" v-else>
+                <div v-if="error.length > 0" class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+                <div class="form-group">
+                    <label for="accountNumberPartner">Tài khoản thụ hưởng</label>
+                    <select class="form-control" id="accountNumberPartner" v-model="dto.accountNumber">
+                        <option v-for="account of accounts">{{ account.accountNumber }}</option>
+                    </select>
+                    <small id="accountNumberPartnerHelp" class="form-text text-muted">
+                        Số tài khoản ngân hàng thụ hưởng
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="accountNumber">Số tài khoản ngân hàng</label>
+                    <input
+                            class="form-control"
+                            id="accountNumber"
+                            placeholder="Nhập số tài khoản"
+                            autocomplete=""
+                            v-model="dto.accountPaymentNumber">
+                    <small id="accountNumberHelp" class="form-text text-muted">
+                        Tài khoản ngân hàng thanh toán hóa đơn
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="pinNumber">Mã PIN</label>
+                    <input
+                            type="password"
+                            class="form-control"
+                            id="pinNumber"
+                            autocomplete=""
+                            placeholder="Nhập mã PIN"
+                            v-model="dto.accountPaymentPIN">
+                </div>
+                <div class="form-group">
+                    <label for="billNumber">Mã hóa đơn</label>
+                    <input
+                            class="form-control"
+                            id="billNumber"
+                            autocomplete=""
+                            placeholder="Nhập mã hóa đơn"
+                            v-model="dto.billCode">
+                </div>
+                <div class="form-group">
+                    <label for="amount">Số tiền thanh toán (VND)</label>
+                    <input
+                            class="form-control"
+                            id="amount"
+                            autocomplete=""
+                            placeholder="Nhập số tiền"
+                            v-on:input="onChangeAmount($event)"
+                            v-model="dto.amount">
+                </div>
+                <div class="form-group">
+                    <label for="fee">Phí giao dịch (VND)</label>
+                    <input
+                            class="form-control"
+                            id="fee"
+                            disabled="disabled"
+                            readonly
+                            v-model="feeTransfer">
+                </div>
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="exampleRadios1" value="TRANSFER" v-model="dto.typeTransaction">
+                        <label class="form-check-label" for="exampleRadios1">
+                            Người chuyển chịu phí chuyển
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="exampleRadios2" value="RECEIVER" v-model="dto.typeTransaction">
+                        <label class="form-check-label" for="exampleRadios2">
+                            Người nhận chịu phí chuyển
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Thanh toán</button>
+                <router-link :to="{path: '/'}">
+                    <button class="btn btn-default">Hủy</button>
+                </router-link>
+            </form>
+        </div>
+    </template>
+
+    <template id="transaction-history">
+        <div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="exampleRadios1" value="partner" v-model="findType">
+                        <label class="form-check-label" for="exampleRadios1">
+                            Tìm kiếm giao dịch bằng tài khoản nhận thanh toán
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="exampleRadios2" value="account" v-model="findType">
+                        <label class="form-check-label" for="exampleRadios2">
+                            Tìm kiếm giao dịch bằng tài khoản ngân hàng
+                        </label>
+                    </div>
+                </div>
+                <h2 v-if="findType === 'partner'">Nhập thông tin tài khoản nhận thanh toán</h2>
+                <h2 v-else>Nhập thông tin tài khoản ngân hàng</h2>
+                <form v-if="findType === 'partner'" @submit="find">
+                    <div v-if="error.length > 0" class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                    <div class="form-group">
+                        <label for="accountNumber">Số tài khoản</label>
+                        <input
+                                class="form-control"
+                                id="accountNumber"
+                                placeholder="Nhập số tài khoản"
+                                autocomplete=""
+                                v-model="partner.accountNumber">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Mật khẩu</label>
+                        <input
+                                type="password"
+                                class="form-control"
+                                id="password"
+                                autocomplete=""
+                                placeholder="Nhập mật khẩu"
+                                v-model="partner.password">
+                    </div>
+                    <div class="form-group">
+                        <label for="startDate">Từ ngày</label>
+                        <input type="date"
+                               class="form-control"
+                               id="startDate"
+                               autocomplete=""
+                               placeholder="Chọn ngày"
+                               v-model="startDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">Đến ngày</label>
+                        <input type="date"
+                               class="form-control"
+                               id="endDate"
+                               autocomplete=""
+                               placeholder="Chọn ngày"
+                               v-model="endDate">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+                    <router-link :to="{path: '/'}">
+                        <button class="btn btn-default">Quay lại</button>
+                    </router-link>
+                </form>
+                <form @submit="find" v-else>
+                    <div v-if="error.length > 0" class="alert alert-danger" role="alert">
+                        {{ error }}
+                    </div>
+                    <div class="form-group">
+                        <label for="accountNumber">Số tài khoản</label>
+                        <input
+                                class="form-control"
+                                id="accountNumber"
+                                placeholder="Nhập số tài khoản"
+                                autocomplete=""
+                                v-model="account.accountNumber">
+                    </div>
+                    <div class="form-group">
+                        <label for="pinNumber">Mã PIN</label>
+                        <input
+                                type="password"
+                                class="form-control"
+                                id="pinNumber"
+                                autocomplete=""
+                                placeholder="Nhập mã PIN"
+                                v-model="account.pinNumber">
+                    </div>
+                    <div class="form-group">
+                        <label for="startDate">Từ ngày</label>
+                        <input type="date"
+                               class="form-control"
+                               id="startDate"
+                               autocomplete=""
+                               placeholder="Chọn ngày"
+                               v-model="startDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="endDate">Đến ngày</label>
+                        <input type="date"
+                               class="form-control"
+                               id="endDate"
+                               autocomplete=""
+                               placeholder="Chọn ngày"
+                               v-model="endDate">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+                    <router-link :to="{path: '/'}">
+                        <button class="btn btn-default">Quay lại</button>
+                    </router-link>
+                </form>
+            </div>
+
+            <div v-if="finish" class="col-md-12" style="padding-top: 25px;">
+                <table class="table" v-if="findType === 'partner'">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Tài khoản chuyển</th>
+                        <th scope="col">Tài khoản nhận</th>
+                        <th scope="col">Tên giao dịch(Mã hoá đơn)</th>
+                        <th scope="col">Số tiền nhận thanh toán</th>
+                        <th scope="col">Ngày nhận</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(transaction, i) of transactions" :key="i">
+                        <th scope="row">{{ i + 1 }}</th>
+                        <td>{{ transaction.fromAccountNumber }}</td>
+                        <td>{{ transaction.toAccountNumber }}</td>
+                        <td>{{ transaction.billCode }}</td>
+                        <td v-if="typeTransaction === 'RECEIVER'">
+                            {{ formatMoney(transaction.amount) }}
+                        </td>
+                        <td v-else>{{ formatMoney(transaction.amount - transaction.fees) }}</td>
+                        <td>{{ transaction.createdAt }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+                <table class="table" v-else>
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Tài khoản nhận</th>
+                        <th scope="col">Tên giao dịch(Mã hoá đơn)</th>
+                        <th scope="col">Số tiền thanh toán</th>
+                        <th scope="col">Ngày nhận</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(transaction, i) of transactions" :key="i">
+                        <th scope="row">{{ i + 1 }}</th>
+                        <td>{{ transaction.toAccountNumber }}</td>
+                        <td>{{ transaction.billCode }}</td>
+                        <td v-if="typeTransaction === 'RECEIVER'">
+                            {{ formatMoney(transaction.amount + transaction.fees) }}
+                        </td>
+                        <td v-else>{{ transaction.amount }}</td>
+                        <td>{{ formatMoney(transaction.createdAt) }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <script src="https://unpkg.com/vue@2.5.22/dist/vue.js"></script>
+    <script src="https://unpkg.com/vue-router@3.0.2/dist/vue-router.js"></script>
+    <script src="https://unpkg.com/axios@0.18.0/dist/axios.min.js"></script>
+    <script src="./script.js"></script>
+</body>
+</html>
